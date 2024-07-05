@@ -1,6 +1,7 @@
 {
     "id": "SWH_WebHook",
-    "description": "",
+    "title": "Sintra Consulting Pimcore webhooks bundle",
+    "description": "Pimcore Bundle that enbable pimcore to expose webook for communication to third parties",
     "modificationDate": 1617282538,
     "parentClass": "",
     "implementsInterfaces": "",
@@ -8,25 +9,26 @@
     "useTraits": "",
     "listingUseTraits": "",
     "allowInherit": false,
-    "allowVariants": null,
+    "allowVariants": false,
     "showVariants": false,
     "layoutDefinitions": {
         "fieldtype": "panel",
         "labelWidth": 100,
+        "labelAlign": "left",
         "layout": null,
         "border": false,
         "name": "pimcore_root",
         "type": null,
         "region": null,
         "title": null,
-        "width": null,
-        "height": null,
+        "width": 0,
+        "height": 0,
         "collapsible": false,
         "collapsed": false,
         "bodyStyle": null,
         "datatype": "layout",
         "permissions": null,
-        "childs": [
+        "children": [
             {
                 "fieldtype": "tabpanel",
                 "border": true,
@@ -42,7 +44,7 @@
                 "bodyStyle": "",
                 "datatype": "layout",
                 "permissions": null,
-                "childs": [
+                "children": [
                     {
                         "fieldtype": "panel",
                         "labelWidth": 100,
@@ -59,14 +61,14 @@
                         "bodyStyle": "",
                         "datatype": "layout",
                         "permissions": null,
-                        "childs": [
+                        "children": [
                             {
                                 "fieldtype": "multiselect",
                                 "options": [
                                 ],
                                 "width": 600,
                                 "height": "",
-                                "maxItems": "",
+                                "maxItems": 12,
                                 "renderType": "tags",
                                 "optionsProviderClass": "\\WebHookBundle\\Utils\\OptionsProvider",
                                 "optionsProviderData": "",
@@ -143,7 +145,7 @@
                                 ],
                                 "width": 600,
                                 "height": "",
-                                "maxItems": "",
+                                "maxItems": 12,
                                 "renderType": "tags",
                                 "optionsProviderClass": "",
                                 "optionsProviderData": "",
@@ -213,7 +215,7 @@
                         "bodyStyle": "",
                         "datatype": "layout",
                         "permissions": null,
-                        "childs": [
+                        "children": [
                             {
                                 "fieldtype": "input",
                                 "width": 600,
@@ -307,6 +309,7 @@
     "group": "",
     "showAppLoggerTab": false,
     "linkGeneratorReference": "",
+    "previewGeneratorReference": "",
     "compositeIndices": [],
     "generateTypeDeclarations": false,
     "showFieldLookup": false,
