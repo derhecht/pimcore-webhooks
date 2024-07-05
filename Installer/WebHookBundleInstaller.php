@@ -5,58 +5,64 @@ namespace WebHookBundle\Installer;
 use Doctrine\DBAL\Migrations\AbortMigrationException;
 use Doctrine\DBAL\Migrations\Version;
 use Doctrine\DBAL\Schema\Schema;
+use Pimcore\Db\ConnectionInterface;
 use Pimcore\Extension\Bundle\Installer\AbstractInstaller;
 use Pimcore\Extension\Bundle\Installer\MigrationInstaller;
+use Pimcore\Log\ApplicationLogger;
+use Pimcore\Migrations\MigrationManager;
 use Pimcore\Model\DataObject\ClassDefinition;
 use Pimcore\Model\DataObject\ClassDefinition\Service;
-
+use Pimcore\Model\DataObject\Fieldcollection;
+use Pimcore\Model\DataObject\Objectbrick;
+use Random\RandomException;
 use Symfony\Component\Console\Output\BufferedOutput;
 use Symfony\Component\Console\Output\Output;
 use Symfony\Component\Console\Output\OutputInterface;
-use Pimcore\Db\ConnectionInterface;
-use Pimcore\Migrations\MigrationManager;
-use Pimcore\Model\DataObject\Fieldcollection;
-use Pimcore\Model\DataObject\Objectbrick;
 use Symfony\Component\Finder\Finder;
-use Pimcore\Log\ApplicationLogger;
 
 class WebHookBundleInstaller extends AbstractInstaller
 {
-    public function install() {
+    public function install(): void
+    {
         $this->installClasses();
         $this->installKeys();
     }
 
-    public function uninstall() {
-    
+    public function uninstall(): void
+    {
+
     }
 
-    private function installKeys() {
-                
-        if(!\Pimcore\Model\WebsiteSetting::getByName('WebHookApi-key')){
+    /**
+     * @throws RandomException
+     */
+    private function installKeys()
+    {
+
+        if (!\Pimcore\Model\WebsiteSetting::getByName('WebHookApi-key')) {
             $settingApiKey = new \Pimcore\Model\WebsiteSetting();
             $settingApiKey->setName("WebHookApi-key");
             $settingApiKey->setType("text");
             $settingApiKey->setData(md5(random_bytes(300)));
             $settingApiKey->save();
         } else {
-            $this->output->write(sprintf('\nFound WebHookApi-key\n'));
+            $this->output->writeln('Found WebHookApi-key');
         }
 
-        if(\Pimcore\Model\WebsiteSetting::getByName('WebHookPublicKey') && \Pimcore\Model\WebsiteSetting::getByName('WebHookPrivateKey')){
-            $this->output->write(sprintf('\nFound public and private key\n'));
+        if (\Pimcore\Model\WebsiteSetting::getByName('WebHookPublicKey') && \Pimcore\Model\WebsiteSetting::getByName('WebHookPrivateKey')) {
+            $this->output->writeln('Found public and private key');
         } else {
             $new_key_pair = openssl_pkey_new(array(
                 "private_key_bits" => 2048,
                 "private_key_type" => OPENSSL_KEYTYPE_RSA,
             ));
-    
+
             openssl_pkey_export($new_key_pair, $privateKey);
-            
+
             $details = openssl_pkey_get_details($new_key_pair);
             $publicKey = $details['key'];
-            
-            if($settingPublicKey = \Pimcore\Model\WebsiteSetting::getByName('WebHookPublicKey')){
+
+            if ($settingPublicKey = \Pimcore\Model\WebsiteSetting::getByName('WebHookPublicKey')) {
                 $settingPublicKey->delete();
             }
             $settingPublicKey = new \Pimcore\Model\WebsiteSetting();
@@ -64,19 +70,20 @@ class WebHookBundleInstaller extends AbstractInstaller
             $settingPublicKey->setType("text");
             $settingPublicKey->setData($publicKey);
             $settingPublicKey->save();
-            
-            if($settingPrivateKey = \Pimcore\Model\WebsiteSetting::getByName('WebHookPrivateKey')) {
+
+            if ($settingPrivateKey = \Pimcore\Model\WebsiteSetting::getByName('WebHookPrivateKey')) {
                 $settingPrivateKey->delete();
             }
             $settingPrivateKey = new \Pimcore\Model\WebsiteSetting();
             $settingPrivateKey->setName("WebHookPrivateKey");
             $settingPrivateKey->setType("text");
             $settingPrivateKey->setData($privateKey);
-            $settingPrivateKey->save();        
+            $settingPrivateKey->save();
         }
     }
 
-    private function installClasses() {
+    private function installClasses()
+    {
         $installSourcesPath = __DIR__ . "/../Resources/install";
         $classesToInstall = [
             "WebHook" => "WB_WebHook"
@@ -96,7 +103,7 @@ class WebHookBundleInstaller extends AbstractInstaller
             }
             $classes[$className] = $path;
         }
-        
+
         foreach ($classes as $key => $path) {
             $class = ClassDefinition::getByName($key);
 
@@ -118,17 +125,16 @@ class WebHookBundleInstaller extends AbstractInstaller
                     'Failed to create class "%s"',
                     $key
                 ));
-                continue;
             }
         }
     }
-    
-    public function canBeUninstalled()
+
+    public function canBeUninstalled(): bool
     {
         return true; // this can be customized
     }
 
-    public function canBeInstalled()
+    public function canBeInstalled(): bool
     {
         return true; // this can be customized
     }
