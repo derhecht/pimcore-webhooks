@@ -1,7 +1,7 @@
 #!/bin/bash
-echo "running test on cicd"
+echo "running test on ci/cd..."
 
-cd /var/www/html/
+cd /var/www/html/ || exit
 
 echo "working in html"
 
@@ -19,10 +19,10 @@ vendor/bin/pimcore-install --admin-username pimcore --admin-password pimcore --m
 bin/console pimcore:bundle:enable WebHookBundle
 bin/console pimcore:bundle:install WebHookBundle
 
-cd src/WebHookBundle/
+cd src/WebHookBundle/ || exit
 
 composer validate --strict --no-check-version 
 
-cd tests
+cd tests || exit
 
 /var/www/html/vendor/bin/phpunit WebHookTest.php
