@@ -1,17 +1,19 @@
 <?php
 namespace WebHookBundle\EventListener;
-  
-use Pimcore\Event\Model\ElementEventInterface;
+
+use GuzzleHttp\Exception\TransferException;
 use Pimcore\Event\Model\DataObjectEvent;
+use Pimcore\Event\Model\ElementEventInterface;
 use Pimcore\Log\ApplicationLogger;
-use WebHookBundle\Utils\ExportDataObject;
-use Symfony\Component\HttpClient\HttpClient;
-use Symfony\Component\Serializer\Encoder\XmlEncoder;
-use Symfony\Component\Serializer\Encoder\JsonEncoder;
-use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
-use Symfony\Component\Serializer\Serializer;
 use Pimcore\Model\DataObject\ClassDefinition;
 use Pimcore\Model\Notification\Service\NotificationService;
+use Pimcore\Tool;
+use GuzzleHttp\Client;
+use Symfony\Component\Serializer\Encoder\JsonEncoder;
+use Symfony\Component\Serializer\Encoder\XmlEncoder;
+use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
+use Symfony\Component\Serializer\Serializer;
+use WebHookBundle\Utils\ExportDataObject;
 
 class WebHookListener {
     
@@ -109,6 +111,7 @@ class WebHookListener {
                     $arrayData["arguments"] = $e->getArguments();
 
                     $jsonContent = $serializer->serialize($arrayData, 'json');
+                    $this->logger->debug($jsonContent);
 
                     foreach ($webHooks as $webHook) {
                         $url = $webHook->getURL();
@@ -122,8 +125,7 @@ class WebHookListener {
                             $apiKey = $webHookApiKey->getData();
                         } else {
                             $apiKey = "no-apy-key-found";
-                            $this->logger->error("Web Hook error: no api-key key found \nEvent: ".$eventName." Class: ".$entityType."\nhost: ".$webHook->getURL().['relatedObject' => $dataObject->getId()]);
-                            \Pimcore\Log\Simple::log("WebHook", "No webHook api-key found");
+                            $this->logger->warning("Web Hook error: no api-key key found \nEvent: ".$eventName." Class: ".$entityType."\nhost: ".$webHook->getURL().['relatedObject' => $dataObject->getId()]);
                         }
 
                         $usedPrivate = null;
@@ -137,12 +139,12 @@ class WebHookListener {
                             $usedPrivate = "Use default private key";
                         }
 
-                        $client = HttpClient::create();
+                        $client = new Client();
                         $method = 'POST';
                         $headers = ['Content-Type' => 'application/json',
                                     "x-pimcore-listen-event" => $eventName,
                                     "x-pimcore-object" => $entityType,
-                                    "x-pimcore-apikey" => $apiKey,
+                                    "x-api-key" => $apiKey,
                                 ];
 
                         if ($usedPrivate != null) {
@@ -152,8 +154,39 @@ class WebHookListener {
                             ];
                         }
 
+                        /*
+                         * May have a look at https://github.com/softonic/graphql-client for complex GraphQL use cases.
+                         * */
+
+                        //TODO: Make this generic!
+
+                        /**
+                         * Mutation Example for default example data model car
+                         */
+                        $mutation = <<<'MUTATION'
+mutation($id: Int, $description: String) {
+  updateCar(
+    id: $id,
+    input: {
+      description: $description
+    }){
+    message
+  }
+}
+MUTATION;
+
+                        $variables = [
+                            'id' => $dataObject->getId(),
+                            'description' => $dataObject->get('description')
+                        ];
+
+                        //--- End of TODO block ---
+
+                        $body = ['query' => $mutation];
+                        $body['variables'] = $variables;
+
                         try {
-                            $response = $client->request($method, $url, ['headers' => $headers, 'body' => $jsonContent]);
+                            $response = $client->request($method, $url, ['headers' => $headers, 'body' => json_encode($body, JSON_UNESCAPED_SLASHES)]);
                             
                             $messaggeData = array();
                             $messaggeData['title'] = "WebHook Error";
@@ -167,10 +200,8 @@ class WebHookListener {
                                 $this->logger->error($messaggeData['message'], ['relatedObject' => $dataObject->getId()]);
                             }
                             
-                            \Pimcore\Log\Simple::log("WebHook", "Event: ".$eventName." Class: ".$entityType." object Id ".$dataObject->getId()." host: ".$webHook->getURL()." Response: ".$response->getStatusCode());
-
-                        } catch (\Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface $e){
-                            \Pimcore\Log\Simple::log("WebHook","Web Hook request error: Event: ".$eventName." Class: ".$entityType." object Id ".$dataObject->getId()." host: ".$webHook->getURL()." Response: ".$e->getMessage());
+                            $this->logger->info("Event: " . $eventName . " Class: " . $entityType . " object Id " . $dataObject->getId() . " host: " . $webHook->getURL() . " Response: " . $response->getStatusCode());
+                        } catch (TransferException $e){
                             $this->logger->error("Web Hook request error: \nEvent: ".$eventName." Class: ".$entityType."\nhost: ".$webHook->getURL()."\nResponse: ".$e->getMessage(), ['relatedObject' => $dataObject->getId()]);
                         
                             $messaggeData = array();
