@@ -176,7 +176,7 @@
                                 "columnType": "varchar",
                                 "columnLength": 190,
                                 "phpdocType": "string",
-                                "regex": "https:\/\/*.*",
+                                "regex": "http(s)?:\/\/.+",
                                 "unique": false,
                                 "showCharCount": false,
                                 "name": "URL",

@@ -88,7 +88,7 @@ class WebHookListener {
 
                 $class = '\\Pimcore\\Model\\DataObject\\WebHook\\Listing';
                 \Pimcore\Model\DataObject\AbstractObject::setHideUnpublished(true);
-                $webHooksList = new \Pimcore\Model\DataObject\WebHook\Listing();
+                $webHooksList = new \Pimcore\Model\DataObject\Webhook\Listing();
                 $webHooksList->setCondition("EntityType LIKE ? AND ListenedEvent LIKE ?", ["%".$entityType."%", "%".$eventName."%"]);
                 $webHooksList = $webHooksList->load();
 
@@ -126,6 +126,7 @@ class WebHookListener {
                             \Pimcore\Log\Simple::log("WebHook", "No webHook api-key found");
                         }
 
+                        $usedPrivate = null;
                         if ($webHook->getPrivateKey() != null) {
                             openssl_sign($jsonContent, $signature, $webHook->getPrivateKey(), OPENSSL_ALGO_SHA1);
                             $signature = base64_encode($signature);
@@ -134,10 +135,6 @@ class WebHookListener {
                             openssl_sign($jsonContent, $signature, $webHookprivateKey->getData(), OPENSSL_ALGO_SHA1);
                             $signature = base64_encode($signature);
                             $usedPrivate = "Use default private key";
-                        } else {
-                            $signature = "no-private-key-found";
-                            $this->logger->error("Web Hook error: no private key found \nEvent: ".$eventName." Class: ".$entityType."\nhost: ".$webHook->getURL().['relatedObject' => $dataObject->getId()]);
-                            \Pimcore\Log\Simple::log("WebHook", "No webHook private key found");
                         }
 
                         $client = HttpClient::create();
@@ -146,9 +143,15 @@ class WebHookListener {
                                     "x-pimcore-listen-event" => $eventName,
                                     "x-pimcore-object" => $entityType,
                                     "x-pimcore-apikey" => $apiKey,
-                                    "x-pimcore-signature" => $signature,
-                                    "x-pimcore-used-private-key" => $usedPrivate
                                 ];
+
+                        if ($usedPrivate != null) {
+                            $headers[] = [
+                                "x-pimcore-signature" => $signature,
+                                "x-pimcore-used-private-key" => $usedPrivate
+                            ];
+                        }
+
                         try {
                             $response = $client->request($method, $url, ['headers' => $headers, 'body' => $jsonContent]);
                             
